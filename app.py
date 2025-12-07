@@ -286,7 +286,7 @@ elif page == "Training Insights":
 
     st.markdown("---")
     st.subheader("2. Target Variable Analysis")
-    st.caption("Understanding the risk profile via claim cost distribution.")
+    #st.caption("Understanding the risk profile via claim cost distribution.")
     
     # Load Training Data (Cache this!)
     @st.cache_data
