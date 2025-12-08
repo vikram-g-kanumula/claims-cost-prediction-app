@@ -2,55 +2,51 @@
 # Storyboard: Claims Cost Prediction Analysis
 
 ## 1. Executive Summary & Problem Statement
-**Objective:** To develop a predictive modeling framework for estimating the `UltimateIncurredClaimCost` of workers' compensation claims.
-**Context:** Accurate early-stage cost estimation is critical for reserving, risk management, and financial planning. Traditional actuarial methods often lag in incorporating unstructured data and complex non-linear interactions.
-**Solution:** This project implements an **Advanced Stacking Ensemble Model** that integrates Natural Language Processing (NLP) of claim descriptions with domain-specific feature engineering.
+*   **Objective**: To develop a predictive modeling framework for estimating the `UltimateIncurredClaimCost` of workers' compensation claims.
+*   **Context**: Accurate early-stage cost estimation is critical for reserving, risk management, and financial planning. Traditional actuarial methods often lag in incorporating unstructured data and complex non-linear interactions.
+*   **Solution**: This project implements an **Advanced Stacking Ensemble Model** that integrates Natural Language Processing (NLP) of claim descriptions with domain-specific feature engineering.
 
 ## 2. Methodology: Exploratory Data Analysis (EDA)
-A comprehensive analysis was conducted to identify key drivers of cost escalation.
+A comprehensive analysis was conducted on the training dataset of **54,000 records** to identify key drivers of cost escalation.
 
-### 2.1. Data Quality & Preprocessing
-*   **Data Integrity Check:** Identified and corrected a semantic error in column naming (`InitialIncurredClaimsCost`).
-*   **Distribution Analysis:** The target variable (`UltimateIncurredClaimCost`) exhibited significant right-skewness. A logarithmic transformation ($\log(1+x)$) was applied to normalize the distribution for regression stability.
+### 2.1. Feature Distribution & Linearity
+*   **Target Skewness**: The `UltimateIncurredClaimCost` displayed significant right-skewness (Mean: ~$11,003). A logarithmic transformation ($\log(1+x)$) was applied to normalize the distribution, stabilizing the variance for regression modeling.
+*   **Primary Predictor**: `InitialIncurredClaimsCost` demonstrated the strongest single-variable correlation ($r \approx 0.40$) with the ultimate cost, validating its use as a baseline regressor.
 
-### 2.2. Key Findings
-*   **Temporal Correlation:** A positive correlation was observed between `ReportLag` (days between accident and reporting) and ultimate cost, supporting the hypothesis that delayed reporting exacerbates claim severity.
-*   **Textual Signals:** Analysis of `ClaimDescription` via word frequency and latent semantic analysis indicated that specific injury types (e.g., "Strain", "Lower Back") are associated with systematic variances in cost.
+### 2.2. Complex Interactions
+*   **Temporal Dynamics**: The average reporting lag was found to be **38.32 days**. While the linear correlation with cost was weak ($r \approx 0.03$), tree-based models (XGBoost) effectively utilized this feature to split high-risk tail events.
+*   **Demographic Interaction**: The interaction term `Age * WeeklyWages` showed a meaningful correlation ($r \approx 0.17$), outperforming age or wage alone. This suggests that the **economic replacement value** of a claimant (older, higher-wage workers) is a robust predictor of claim severity.
 
 ## 3. Feature Engineering Strategy
-To enhance predictive power, the following domain-aware features were engineered:
+Systematic engineering was applied to bridge the gap between raw data and predictive signals.
 
-*   **Dimensionality Reduction (NLP):**
-    *   **Technique:** Term Frequency-Inverse Document Frequency (TF-IDF) followed by Truncated Singular Value Decomposition (SVD).
-    *   **Rationale:** Captured latent semantic structures from unstructured text in 30 orthogonal components, enabling the model to "read" accident details.
-*   **Interaction Effects:**
-    *   **Feature:** `Age * WeeklyWages`.
-    *   **Rationale:** Modeled the compounding financial risk associated with older workers who possess higher replacement wage requirements.
-*   **Linearization:**
-    *   **Feature:** `LogInitialCost`.
-    *   **Rationale:** Linearized the strongest predictor to facilitate gradient descent efficiency in base learners.
+*   **Dimensionality Reduction (NLP)**
+    *   **Technique**: TF-IDF Vectorization $\rightarrow$ Truncated SVD (30 Components).
+    *   **Rationale**: "Claim Description" text holds latent semantic value regarding injury severity. Decomposing this into 30 orthogonal components allowed the model to ingress unstructured text as dense numerical features.
+*   **Mathematical Linearization**
+    *   **Feature**: `LogInitialCost`.
+    *   **Rationale**: Linearizing the initial cost provided a consistent gradient for the base learners, enhancing convergence speed.
 
 ## 4. Model Architecture & Performance
 A multi-stage stacking ensemble was selected to maximize generalization.
 
 ### 4.1. Architecture
-*   **Level 1 (Base Learners):**
-    *   **XGBoost:** Selected for its gradient boosting framework capable of handling non-linear interactions and missing data.
-    *   **LightGBM:** Utilized for its leaf-wise tree growth, providing superior speed and accuracy on larger datasets.
-*   **Level 2 (Meta-Learner):**
-    *   **Ridge Regression (CV):** Employed to aggregate base predictions while regularizing coefficients to prevent overfitting.
+*   **Level 1 (Base Learners)**
+    *   **XGBoost & LightGBM**: Selected for their ability to handle non-linearities and potential missing values natively.
+*   **Level 2 (Meta-Learner)**
+    *   **Ridge Regression (CV)**: Aggregated base predictions with L2 regularization to prevent overfitting.
 
 ### 4.2. Validation Results
 The model was evaluated using 5-Fold Cross-Validation:
-*   **Log-RMSE:** **0.68** (Indicates strong predictive capability on the normalized scale).
-*   **Raw RMSE:** **~$25,500** (Reflecting the high variance inherent in insurance loss distributions).
+*   **Log-RMSE**: **0.5636** (Stable performance on the log scale).
+*   **Raw RMSE**: **~$25,578** (Reflecting the inherent variance in high-cost claims).
 
 ## 5. Strategic Implications
-The deployment of this model via the specific Streamlit interface offers three core business values:
+The deployment of this model via the Streamlit interface offers tangible business value:
 
-1.  **Operational Efficiency:** Automated scoring allows claims adjusters to prioritize complex files immediately upon intake.
-2.  **Risk Transparency:** Integration of SHAP (SHapley Additive exPlanations) values provides explainability, allowing stakeholders to understand *why* a claim is high-risk (e.g., identifying if "Report Lag" or "Initial Cost" is the driver).
-3.  **Financial Accuracy:** improved consistency in case reserving reduces the volatility of the actuarial balance sheet.
+1.  **Prioritization**: Automated scoring allows claims adjusters to triage high-value claims immediately.
+2.  **Explainability**: Integration of SHAP values isolates the contribution of specific features (e.g., whether a high prediction is driven by the *Initial Cost* or the *Injury Description*), enhancing trust in automated decisions.
+3.  **Efficiency**: Reducing the time-to-estimate for complex claims supports more accurate financial reserving.
 
 ## 6. Conclusion
-The integration of unstructured text data with traditional structured attributes has resulted in a robust predictive engine. This approach validates the efficacy of machine learning in modernizing actuarial workflows.
+The integration of unstructured text data with traditional structured attributes—specifically the interaction of age and wage—has resulted in a robust predictive engine. This approach validates the efficacy of machine learning in modernizing actuarial workflows.

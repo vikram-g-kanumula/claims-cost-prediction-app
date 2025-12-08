@@ -235,7 +235,7 @@ elif page == "Training Insights":
     st.markdown("### 📋 Executive Summary")
     with st.container():
         st.info("""
-        **Performance**: **$25,534 RMSE** (Validation).  
+        **Performance**: **$25,578 RMSE** (Validation).  
         **Actuarial Insight**: `Initial Incurred Cost`, `Weekly Wages` are dominant drivers.  
         **Recommendation**: Suitable for reserves & triage.
         """)
@@ -243,8 +243,8 @@ elif page == "Training Insights":
     # KPIs Row
     st.markdown("### 📈 Key Performance Indicators (KPIs)")
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    kpi1.metric("Validation RMSE", "$25,534", help="Lower is better")
-    kpi2.metric("R-Squared", "0.68", help="Variance explained")
+    kpi1.metric("Validation RMSE", "$25,578", help="Lower is better")
+    kpi2.metric("Raw R-Squared", "0.47", help="Variance explained (Original Scale)")
     kpi3.metric("Key Feature", "Initial Cost", help="Top Predictor")
     kpi4.metric("Algorithm", "Stack Ensemble", help="XGB+LGBM+Ridge")
     
