@@ -139,9 +139,13 @@ def preprocess_input(df, tfidf, svd, encoders, feature_names=None):
         df['AccidentDayOfWeek'] = df['DateTimeOfAccident'].dt.dayofweek
         df = df.drop(columns=date_cols)
     
-    # New Stats Features (Order Critical: Before NLP in training!)
+    # Rename typo column if present
     if 'InitialIncurredCalimsCost' in df.columns:
-        df['LogInitialCost'] = np.log1p(df['InitialIncurredCalimsCost'])
+        df = df.rename(columns={'InitialIncurredCalimsCost': 'InitialIncurredClaimsCost'})
+
+    # New Stats Features (Order Critical: Before NLP in training!)
+    if 'InitialIncurredClaimsCost' in df.columns:
+        df['LogInitialCost'] = np.log1p(df['InitialIncurredClaimsCost'])
         
     if 'Age' in df.columns and 'WeeklyWages' in df.columns:
         df['Age_Wage_Interaction'] = df['Age'] * df['WeeklyWages']
@@ -189,7 +193,7 @@ if page == "Home & Upload":
     <div style='background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
         <h4 style='color: #0d2c54; margin-top: 0;'>🚀 Enterprise Analytics Portal</h4>
         <p>Welcome to the advanced claims forecasting engine. Upload your claims data to instantly generate cost predictions and analyze risk drivers.</p>
-        <p><b>Capabilities:</b> Automated Batches • Real-time Scoring • Actuarial Insights</p>
+        <p><b>Capabilities:</b> Batch Prediction • Claim level Scoring • Actuarial Insights</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -389,7 +393,7 @@ elif page == "Single Prediction":
                 'Gender': gender,
                 'MaritalStatus': marital,
                 'WeeklyWages': wages,
-                'InitialIncurredCalimsCost': initial_cost,
+                'InitialIncurredClaimsCost': initial_cost,
                 'PartTimeFullTime': part_time,
                 # Defaults for unexposed fields
                 'DependentChildren': 0, 
@@ -405,7 +409,13 @@ elif page == "Single Prediction":
                 pred_log = model.predict(X_single)
                 pred = np.expm1(pred_log)[0]
                 
-                st.metric("Predicted Estimate", f"${pred:,.2f}")
-                st.info(f"Log-Prediction: {pred_log[0]:.4f}")
+                # st.metric("Predicted Estimate", f"${pred:,.2f}")
+                st.markdown(f"""
+                <div style="text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 10px; border: 1px solid #e9ecef;">
+                    <p style="color: #6c757d; font-size: 1.5rem; margin-bottom: 5px;">Predicted Ultimate Cost</p>
+                    <h1 style="color: #6c757d; font-size: 3.0rem; margin: 0; font-weight: 700;">${pred:,.2f}</h1>
+                </div>
+                """, unsafe_allow_html=True)
+                #st.info(f"Log-Prediction: {pred_log[0]:.4f}")
             except Exception as e:
                 st.error(f"Error: {e}")

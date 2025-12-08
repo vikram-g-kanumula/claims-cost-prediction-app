@@ -28,6 +28,12 @@ ID_COL = 'ClaimNumber'
 def load_data():
     train = pd.read_csv(os.path.join(INPUT_DIR, 'train.csv'))
     test = pd.read_csv(os.path.join(INPUT_DIR, 'test.csv'))
+    
+    # Fix typo in column name
+    for df in [train, test]:
+        if 'InitialIncurredCalimsCost' in df.columns:
+            df.rename(columns={'InitialIncurredCalimsCost': 'InitialIncurredClaimsCost'}, inplace=True)
+            
     return train, test
 
 def preprocess_dates(df):
@@ -43,7 +49,7 @@ def preprocess_dates(df):
     
     # ---------------- NEW FE ----------------
     # Log transform of Initial Cost (handling 0s)
-    df['LogInitialCost'] = np.log1p(df['InitialIncurredCalimsCost'])
+    df['LogInitialCost'] = np.log1p(df['InitialIncurredClaimsCost'])
     
     # Interaction
     df['Age_Wage_Interaction'] = df['Age'] * df['WeeklyWages']
@@ -162,6 +168,37 @@ def main():
     })
     submission.to_csv(submission_path, index=False)
     print(f"Stacked Submission saved to {submission_path}")
+    
+    # ---------------- SHAP ANALYSIS (NEW) ----------------
+    import shap
+    import matplotlib.pyplot as plt
+    
+    print("\nGenerating SHAP Explanations (XGBoost Component)...")
+    # We explain the first estimator (XGBoost)
+    # Note: StackingRegressor stores estimators in .estimators_
+    # And we need to access the underlying trained model
+    
+    try:
+        xgb_model = stacking_regressor.estimators_[0]
+        
+        # Use a sample of test data for speed if large, but here dataset is likely small enough
+        # Using X_test which is already preprocessed
+        explainer = shap.TreeExplainer(xgb_model)
+        shap_values = explainer.shap_values(X_test)
+        
+        plt.figure(figsize=(10, 8))
+        shap.summary_plot(shap_values, X_test, show=False)
+        plt.title("SHAP Summary Plot (XGBoost Component)")
+        plt.tight_layout()
+        
+        shap_plot_path = os.path.join('plots', 'shap_summary.png')
+        plt.savefig(shap_plot_path)
+        plt.close()
+        print(f"SHAP Summary Plot saved to {shap_plot_path}")
+        
+    except Exception as e:
+        print(f"Error generating SHAP values: {e}")
+        print("Continuing without SHAP plot...")
 
 if __name__ == "__main__":
     main()
